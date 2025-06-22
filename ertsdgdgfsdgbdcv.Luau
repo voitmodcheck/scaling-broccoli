@@ -148,6 +148,291 @@ local function AddHoverEffect(element, hoverColor, normalColor)
     end)
 end
 
+-- Mobile Support Detection
+function NexusUI:IsMobile()
+    if not UserInputService then return false end
+    return UserInputService.TouchEnabled and (game:GetService("UserInputService").KeyboardEnabled == false)
+end
+
+-- Adjust UI for mobile
+function NexusUI:AdjustForMobile(element, scaleFactor)
+    scaleFactor = scaleFactor or 1.2
+    if self:IsMobile() then
+        local size = element.Size
+        if size.X.Scale > 0 then
+            element.Size = UDim2.new(size.X.Scale * scaleFactor, size.X.Offset, size.Y.Scale * scaleFactor, size.Y.Offset)
+        else
+            element.Size = UDim2.new(size.X.Scale, size.X.Offset * scaleFactor, size.Y.Scale, size.Y.Offset * scaleFactor)
+        end
+    end
+end
+
+-- Key System for access control
+local KeySystem = {}
+KeySystem.__index = KeySystem
+
+function KeySystem.new(config)
+    local self = setmetatable({}, KeySystem)
+    self.Key = config.key or ""
+    self.FileName = config.fileName or "byteui_key"
+    self.Title = config.title or "ByteUI Key System"
+    self.Subtitle = config.subtitle or "Enter your access key"
+    self.Note = config.note or ""
+    self.Validated = false
+    return self
+end
+
+function KeySystem:validate()
+    -- In a real implementation, this would check against a saved key or server
+    -- For now, we'll just show the UI if no key is set
+    if self.Key == "" then
+        return true
+    end
+    
+    -- Create UI for key input
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "ByteUI_KeySystem"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    
+    local window = NexusUI:CreateWindow({
+        Title = self.Title,
+        Size = UDim2.new(0, 400, 0, 300),
+        Position = UDim2.new(0.5, -200, 0.5, -150)
+    })
+    
+    local container = window.Content
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Name = "Title"
+    titleLabel.Size = UDim2.new(1, -20, 0, 30)
+    titleLabel.Position = UDim2.new(0, 10, 0, 10)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = self.Subtitle
+    titleLabel.TextColor3 = CurrentTheme.TextPrimary
+    titleLabel.TextSize = 18
+    titleLabel.Font = Enum.Font.SourceSansBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = container
+    
+    local noteLabel = Instance.new("TextLabel")
+    noteLabel.Name = "Note"
+    noteLabel.Size = UDim2.new(1, -20, 0, 40)
+    noteLabel.Position = UDim2.new(0, 10, 0, 50)
+    noteLabel.BackgroundTransparency = 1
+    noteLabel.Text = self.Note
+    noteLabel.TextColor3 = CurrentTheme.TextSecondary
+    noteLabel.TextSize = 14
+    noteLabel.Font = Enum.Font.SourceSans
+    noteLabel.TextXAlignment = Enum.TextXAlignment.Left
+    noteLabel.TextYAlignment = Enum.TextYAlignment.Top
+    noteLabel.TextWrapped = true
+    noteLabel.Parent = container
+    
+    local keyInput = Instance.new("TextBox")
+    keyInput.Name = "KeyInput"
+    keyInput.Size = UDim2.new(1, -20, 0, 40)
+    keyInput.Position = UDim2.new(0, 10, 0, 100)
+    keyInput.BackgroundColor3 = CurrentTheme.Surface
+    keyInput.BorderSizePixel = 0
+    keyInput.Text = ""
+    keyInput.PlaceholderText = "Enter key..."
+    keyInput.ClearTextOnFocus = false
+    keyInput.TextColor3 = CurrentTheme.TextPrimary
+    keyInput.TextSize = 14
+    keyInput.Font = Enum.Font.SourceSans
+    keyInput.Parent = container
+    
+    local submitButton = Instance.new("TextButton")
+    submitButton.Name = "SubmitButton"
+    submitButton.Size = UDim2.new(0, 150, 0, 35)
+    submitButton.Position = UDim2.new(0.5, -75, 0, 150)
+    submitButton.BackgroundColor3 = CurrentTheme.Primary
+    submitButton.BorderSizePixel = 0
+    submitButton.Text = "Submit"
+    submitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    submitButton.TextSize = 14
+    submitButton.Font = Enum.Font.SourceSansSemibold
+    submitButton.Parent = container
+    
+    local isHovering = false
+    
+    submitButton.MouseEnter:Connect(function()
+        isHovering = true
+        CreateSpringTween(submitButton, {BackgroundColor3 = CurrentTheme.PrimaryVariant}, 0.2)
+    end)
+    
+    submitButton.MouseLeave:Connect(function()
+        isHovering = false
+        CreateSpringTween(submitButton, {BackgroundColor3 = CurrentTheme.Primary}, 0.2)
+    end)
+    
+    submitButton.MouseButton1Click:Connect(function()
+        local enteredKey = keyInput.Text
+        if enteredKey == self.Key then
+            self.Validated = true
+            screenGui:Destroy()
+            NexusUI:CreateNotification({
+                Title = "Success!",
+                Description = "Key validated successfully",
+                Duration = 3,
+                Type = "success"
+            })
+        else
+            NexusUI:CreateNotification({
+                Title = "Error",
+                Description = "Invalid key. Please try again.",
+                Duration = 3,
+                Type = "error"
+            })
+        end
+    end)
+    
+    return false -- Return false initially until validated
+end
+
+-- Add to NexusUI
+NexusUI.KeySystem = KeySystem
+
+-- Enhanced Animations
+function NexusUI:CreateRippleEffect(parent, position)
+    if not TweenService then return end
+    local ripple = Instance.new("Frame")
+    ripple.Name = "Ripple"
+    ripple.Size = UDim2.new(0, 0, 0, 0)
+    ripple.Position = UDim2.new(0, position.X, 0, position.Y)
+    ripple.AnchorPoint = Vector2.new(0.5, 0.5)
+    ripple.BackgroundColor3 = CurrentTheme.Primary
+    ripple.BackgroundTransparency = 0.7
+    ripple.BorderSizePixel = 0
+    ripple.Parent = parent
+    ripple.ZIndex = parent.ZIndex + 1
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = ripple
+    
+    local sizeTween = TweenService:Create(ripple, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 100, 0, 100),
+        BackgroundTransparency = 1
+    })
+    sizeTween:Play()
+    sizeTween.Completed:Connect(function()
+        ripple:Destroy()
+    end)
+    return ripple
+end
+
+function NexusUI:CreateHoverEffect(element, normalColor, hoverColor)
+    if not TweenService then return end
+    local isHovering = false
+    
+    element.MouseEnter:Connect(function()
+        isHovering = true
+        self:CreateTween(element, "BackgroundColor3", hoverColor, 0.2)
+    end)
+    
+    element.MouseLeave:Connect(function()
+        isHovering = false
+        self:CreateTween(element, "BackgroundColor3", normalColor, 0.2)
+    end)
+end
+
+-- Add fade in/out animations
+function NexusUI:FadeIn(element, duration)
+    if not TweenService then return end
+    duration = duration or 0.5
+    element.BackgroundTransparency = 1
+    local tween = TweenService:Create(element, TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {BackgroundTransparency = 0})
+    tween:Play()
+    return tween
+end
+
+function NexusUI:FadeOut(element, duration)
+    if not TweenService then return end
+    duration = duration or 0.5
+    local tween = TweenService:Create(element, TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
+    tween:Play()
+    return tween
+end
+
+-- Enhanced Notification with animations
+function NexusUI:CreateNotification(config)
+    config = config or {}
+    config.Title = config.Title or "Notification"
+    config.Description = config.Description or ""
+    config.Duration = config.Duration or 3
+    config.Type = config.Type or "info" -- info, success, warning, error
+    
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "NexusNotification"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 300, 0, 80)
+    frame.Position = UDim2.new(1, 320, 0, 20)
+    frame.BackgroundColor3 = CurrentTheme.Surface
+    frame.BorderSizePixel = 0
+    frame.Parent = screenGui
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = frame
+    
+    local border = Instance.new("UIStroke")
+    border.Thickness = 1
+    border.Transparency = 0.3
+    border.Color = CurrentTheme.Secondary
+    border.Parent = frame
+    
+    -- Set color based on type
+    local typeColors = {
+        info = CurrentTheme.Primary,
+        success = Color3.fromRGB(52, 199, 89),
+        warning = Color3.fromRGB(255, 159, 10),
+        error = CurrentTheme.Error
+    }
+    border.Color = typeColors[config.Type] or CurrentTheme.Primary
+    
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, -20, 0, 20)
+    title.Position = UDim2.new(0, 10, 0, 10)
+    title.BackgroundTransparency = 1
+    title.Text = config.Title
+    title.TextColor3 = CurrentTheme.TextPrimary
+    title.TextSize = 16
+    title.Font = Enum.Font.SourceSansBold
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = frame
+    
+    local content = Instance.new("TextLabel")
+    content.Size = UDim2.new(1, -20, 0, 40)
+    content.Position = UDim2.new(0, 10, 0, 30)
+    content.BackgroundTransparency = 1
+    content.Text = config.Description
+    content.TextColor3 = CurrentTheme.TextSecondary
+    content.TextSize = 14
+    content.Font = Enum.Font.SourceSans
+    content.TextXAlignment = Enum.TextXAlignment.Left
+    content.TextYAlignment = Enum.TextYAlignment.Top
+    content.TextWrapped = true
+    content.Parent = frame
+    
+    -- Animate in
+    self:CreateTween(frame, "Position", UDim2.new(1, -320, 0, 20), 0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+    
+    -- Auto close
+    spawn(function()
+        wait(config.Duration)
+        local tween = self:CreateTween(frame, "Position", UDim2.new(1, 320, 0, 20), 0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.In)
+        tween.Completed:Connect(function()
+            screenGui:Destroy()
+        end)
+    end)
+    
+    return frame
+end
+
 -- Main Library Functions
 function NexusUI:CreateWindow(config)
     local window = {}
