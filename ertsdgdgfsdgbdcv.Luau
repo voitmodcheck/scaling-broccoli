@@ -1,13 +1,222 @@
--- NexusUI Library - Advanced Roblox UI Framework
--- Version: 2.0.0
--- Features: Smooth animations, multiple themes, responsive design, advanced components
+-- ByteUI Library - Advanced Roblox UI Framework
+-- Version: 3.0.0
+-- Features: Discord-like UI structure, smooth animations, multiple themes, responsive design
 
-local NexusUI = {}
+local ByteUI = {}
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+
+-- Server and Channel Classes
+local Server = {}
+Server.__index = Server
+
+function Server.new(parent, name, icon)
+    local self = setmetatable({}, Server)
+    self.Name = name or "Server"
+    self.Parent = parent
+    self.Channels = {}
+    
+    -- Create server button
+    self.Button = Instance.new("TextButton")
+    self.Button.Name = name .. "Server"
+    self.Button.Size = UDim2.new(1, 0, 0, 40)
+    self.Button.BackgroundTransparency = 1
+    self.Button.Text = name
+    self.Button.TextColor3 = Color3.fromRGB(220, 220, 220)
+    self.Button.TextSize = 14
+    self.Button.Font = Enum.Font.GothamMedium
+    self.Button.TextXAlignment = Enum.TextXAlignment.Left
+    self.Button.Parent = parent.ServerList
+    
+    -- Add hover effect
+    ByteUI:CreateHoverEffect(self.Button, Color3.fromRGB(66, 66, 66), Color3.fromRGB(47, 47, 47))
+    
+    -- Create channel list container
+    self.ChannelList = Instance.new("Frame")
+    self.ChannelList.Name = "ChannelList"
+    self.ChannelList.Size = UDim2.new(1, 0, 1, -50)
+    self.ChannelList.Position = UDim2.new(0, 0, 0, 50)
+    self.ChannelList.BackgroundTransparency = 1
+    self.ChannelList.Visible = false
+    self.ChannelList.Parent = parent.MainFrame
+    
+    -- Toggle channel list visibility
+    self.Button.MouseButton1Click:Connect(function()
+        self.ChannelList.Visible = not self.ChannelList.Visible
+    end)
+    
+    return self
+end
+
+function Server:Channel(name)
+    local channel = {}
+    channel.Name = name
+    channel.Parent = self
+    
+    -- Create channel button
+    channel.Button = Instance.new("TextButton")
+    channel.Button.Name = name .. "Channel"
+    channel.Button.Size = UDim2.new(1, -10, 0, 30)
+    channel.Button.Position = UDim2.new(0, 10, 0, #self.Channels * 35)
+    channel.Button.BackgroundTransparency = 1
+    channel.Button.Text = "# " .. name
+    channel.Button.TextColor3 = Color3.fromRGB(150, 150, 150)
+    channel.Button.TextSize = 14
+    channel.Button.Font = Enum.Font.Gotham
+    channel.Button.TextXAlignment = Enum.TextXAlignment.Left
+    channel.Button.Parent = self.ChannelList
+    
+    -- Add hover effect
+    ByteUI:CreateHoverEffect(channel.Button, Color3.fromRGB(66, 66, 66), Color3.fromRGB(47, 47, 47))
+    
+    -- Create content frame
+    channel.Content = Instance.new("ScrollingFrame")
+    channel.Content.Name = "Content"
+    channel.Content.Size = UDim2.new(1, 0, 1, 0)
+    channel.Content.Position = UDim2.new(0, 0, 0, 0)
+    channel.Content.BackgroundTransparency = 1
+    channel.Content.ScrollBarThickness = 5
+    channel.Content.ScrollBarImageColor3 = Color3.fromRGB(66, 66, 66)
+    channel.Content.Visible = false
+    channel.Content.Parent = self.Parent.MainFrame
+    
+    -- Show/hide content on click
+    channel.Button.MouseButton1Click:Connect(function()
+        -- Hide all other channel contents
+        for _, ch in ipairs(self.Channels) do
+            ch.Content.Visible = false
+            ch.Button.TextColor3 = Color3.fromRGB(150, 150, 150)
+        end
+        
+        -- Show this channel's content
+        channel.Content.Visible = true
+        channel.Button.TextColor3 = Color3.fromRGB(220, 220, 220)
+    end)
+    
+    -- Add UIListLayout for content
+    local listLayout = Instance.new("UIListLayout")
+    listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    listLayout.Padding = UDim.new(0, 5)
+    listLayout.Parent = channel.Content
+    
+    -- Add padding
+    local padding = Instance.new("UIPadding")
+    padding.PaddingLeft = UDim.new(0, 10)
+    padding.PaddingRight = UDim.new(0, 10)
+    padding.PaddingTop = UDim.new(0, 10)
+    padding.PaddingBottom = UDim.new(0, 10)
+    padding.Parent = channel.Content
+    
+    -- Add to channels list
+    table.insert(self.Channels, channel)
+    
+    -- Show first channel by default
+    if #self.Channels == 1 then
+        channel.Content.Visible = true
+        channel.Button.TextColor3 = Color3.fromRGB(220, 220, 220)
+    end
+    
+    -- Add component creation methods
+    function channel:Button(text, callback)
+        return ByteUI:CreateButton({
+            Text = text,
+            Callback = callback,
+            Parent = self.Content
+        })
+    end
+    
+    function channel:Toggle(text, default, callback)
+        return ByteUI:CreateToggle({
+            Text = text,
+            Default = default,
+            Callback = callback,
+            Parent = self.Content
+        })
+    end
+    
+    function channel:Slider(text, min, max, default, callback)
+        return ByteUI:CreateSlider({
+            Text = text,
+            Min = min,
+            Max = max,
+            Default = default,
+            Callback = callback,
+            Parent = self.Content
+        })
+    end
+    
+    function channel:Dropdown(text, options, callback)
+        return ByteUI:CreateDropdown({
+            Text = text,
+            Options = options,
+            Callback = callback,
+            Parent = self.Content
+        })
+    end
+    
+    function channel:Textbox(text, placeholder, callback)
+        return ByteUI:CreateTextbox({
+            Text = text,
+            Placeholder = placeholder,
+            Callback = callback,
+            Parent = self.Content
+        })
+    end
+    
+    function channel:Colorpicker(text, default, callback)
+        return ByteUI:CreateColorPicker({
+            Text = text,
+            Default = default,
+            Callback = callback,
+            Parent = self.Content
+        })
+    end
+    
+    function channel:Bind(text, default, callback)
+        return ByteUI:CreateKeybind({
+            Text = text,
+            Default = default,
+            Callback = callback,
+            Parent = self.Content
+        })
+    end
+    
+    function channel:Label(text)
+        return ByteUI:CreateLabel({
+            Text = text,
+            Parent = self.Content
+        })
+    end
+    
+    function channel:Separator()
+        local line = Instance.new("Frame")
+        line.Name = "Separator"
+        line.Size = UDim2.new(1, -20, 0, 1)
+        line.Position = UDim2.new(0, 10, 0, 0)
+        line.BackgroundColor3 = Color3.fromRGB(47, 47, 47)
+        line.BorderSizePixel = 0
+        line.Parent = self.Content
+        
+        -- Add spacing
+        local spacing = Instance.new("Frame")
+        spacing.Name = "Spacing"
+        spacing.Size = UDim2.new(1, 0, 0, 10)
+        spacing.BackgroundTransparency = 1
+        spacing.Parent = self.Content
+        
+        return line
+    end
+    
+    return channel
+end
 
 -- Configuration
 local Config = {
@@ -434,7 +643,7 @@ function NexusUI:CreateNotification(config)
 end
 
 -- Main Library Functions
-function NexusUI:CreateWindow(config)
+function ByteUI:CreateWindow(config)
     local window = {}
     
     -- Validate config
@@ -958,521 +1167,213 @@ function NexusUI:CreateWindow(config)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 then
                         dragging = false
                     end
-                end)
-                
                 return sliderFrame
             end
             
-            function section:CreateDropdown(config)
+            function ByteUI:CreateServer(config)
+                config = config or {}
+                config.Name = config.Name or "Server"
+                config.Icon = config.Icon or "https://example.com/icon.png"
+                config.Channels = config.Channels or {}
+                
+                local serverFrame = Instance.new("Frame")
+                serverFrame.Name = config.Name .. "Server"
+                serverFrame.Size = UDim2.new(1, 0, 0, 50)
+                serverFrame.BackgroundColor3 = CurrentTheme.SurfaceVariant
+                serverFrame.BorderSizePixel = 0
+                
+                local serverIcon = Instance.new("ImageLabel")
+                serverIcon.Name = "Icon"
+                serverIcon.Size = UDim2.new(0, 24, 0, 24)
+                serverIcon.Position = UDim2.new(0, 10, 0, 13)
+                serverIcon.BackgroundTransparency = 1
+                serverIcon.Image = config.Icon
+                serverIcon.Parent = serverFrame
+                
+                local serverName = Instance.new("TextLabel")
+                serverName.Name = "Name"
+                serverName.Size = UDim2.new(1, -50, 0, 20)
+                serverName.Position = UDim2.new(0, 40, 0, 15)
+                serverName.BackgroundTransparency = 1
+                serverName.Text = config.Name
+                serverName.TextColor3 = CurrentTheme.TextPrimary
+                serverName.TextSize = 14
+                serverName.Font = Enum.Font.SourceSans
+                serverName.TextXAlignment = Enum.TextXAlignment.Left
+                serverName.Parent = serverFrame
+                
+                local channelsFrame = Instance.new("Frame")
+                channelsFrame.Name = "Channels"
+                channelsFrame.Size = UDim2.new(1, 0, 0, #config.Channels * 30)
+                channelsFrame.Position = UDim2.new(0, 0, 1, 10)
+                channelsFrame.BackgroundColor3 = CurrentTheme.SurfaceVariant
+                channelsFrame.BorderSizePixel = 0
+                channelsFrame.Parent = serverFrame
+                
+                local channelsLayout = Instance.new("UIListLayout")
+                channelsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                channelsLayout.Parent = channelsFrame
+                
+                for i, channelConfig in ipairs(config.Channels) do
+                    local channelFrame = Instance.new("Frame")
+                    channelFrame.Name = channelConfig.Name .. "Channel"
+                    channelFrame.Size = UDim2.new(1, 0, 0, 30)
+                    channelFrame.BackgroundColor3 = CurrentTheme.SurfaceVariant
+                    channelFrame.BorderSizePixel = 0
+                    channelFrame.Parent = channelsFrame
+                    
+                    local channelName = Instance.new("TextLabel")
+                    channelName.Name = "Name"
+                    channelName.Size = UDim2.new(1, -20, 0, 20)
+                    channelName.Position = UDim2.new(0, 10, 0, 5)
+                    channelName.BackgroundTransparency = 1
+                    channelName.Text = channelConfig.Name
+                    channelName.TextColor3 = CurrentTheme.TextPrimary
+                    channelName.TextSize = 14
+                    channelName.Font = Enum.Font.SourceSans
+                    channelName.TextXAlignment = Enum.TextXAlignment.Left
+                    channelName.Parent = channelFrame
+                    
+                    local channelButton = Instance.new("TextButton")
+                    channelButton.Name = "Button"
+                    channelButton.Size = UDim2.new(0, 20, 0, 20)
+                    channelButton.Position = UDim2.new(1, -30, 0, 5)
+                    channelButton.BackgroundColor3 = CurrentTheme.SurfaceVariant
+                    channelButton.BorderSizePixel = 0
+                    channelButton.Text = ""
+                    channelButton.Parent = channelFrame
+                    
+                    local buttonCorner = Instance.new("UICorner")
+                    buttonCorner.CornerRadius = UDim.new(0, 4)
+                    buttonCorner.Parent = channelButton
+                    
+                    channelButton.MouseButton1Click:Connect(function()
+                        -- Handle channel button click
+                    end)
+                end
+                
+                return serverFrame
+            end
+            
+            function ByteUI:CreateChannel(config)
+                config = config or {}
+                config.Name = config.Name or "Channel"
+                config.Messages = config.Messages or {}
+                
+                local channelFrame = Instance.new("Frame")
+                channelFrame.Name = config.Name .. "Channel"
+                channelFrame.Size = UDim2.new(1, 0, 0, #config.Messages * 30)
+                channelFrame.BackgroundColor3 = CurrentTheme.SurfaceVariant
+                channelFrame.BorderSizePixel = 0
+                
+                local channelName = Instance.new("TextLabel")
+                channelName.Name = "Name"
+                channelName.Size = UDim2.new(1, -20, 0, 20)
+                channelName.Position = UDim2.new(0, 10, 0, 5)
+                channelName.BackgroundTransparency = 1
+                channelName.Text = config.Name
+                channelName.TextColor3 = CurrentTheme.TextPrimary
+                channelName.TextSize = 14
+                channelName.Font = Enum.Font.SourceSans
+                channelName.TextXAlignment = Enum.TextXAlignment.Left
+                channelName.Parent = channelFrame
+                
+                local messagesFrame = Instance.new("Frame")
+                messagesFrame.Name = "Messages"
+                messagesFrame.Size = UDim2.new(1, 0, 0, #config.Messages * 30)
+                messagesFrame.Position = UDim2.new(0, 0, 1, 10)
+                messagesFrame.BackgroundColor3 = CurrentTheme.SurfaceVariant
+                messagesFrame.BorderSizePixel = 0
+                messagesFrame.Parent = channelFrame
+                
+                local messagesLayout = Instance.new("UIListLayout")
+                messagesLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                messagesLayout.Parent = messagesFrame
+                
+                for i, messageConfig in ipairs(config.Messages) do
+                    local messageFrame = Instance.new("Frame")
+                    messageFrame.Name = messageConfig.Text .. "Message"
+                    messageFrame.Size = UDim2.new(1, 0, 0, 30)
+                    messageFrame.BackgroundColor3 = CurrentTheme.SurfaceVariant
+                    messageFrame.BorderSizePixel = 0
+                    messageFrame.Parent = messagesFrame
+                    
+                    local messageText = Instance.new("TextLabel")
+                    messageText.Name = "Text"
+                    messageText.Size = UDim2.new(1, -20, 0, 20)
+                    messageText.Position = UDim2.new(0, 10, 0, 5)
+                    messageText.BackgroundTransparency = 1
+                    messageText.Text = messageConfig.Text
+                    messageText.TextColor3 = CurrentTheme.TextPrimary
+                    messageText.TextSize = 14
+                    messageText.Font = Enum.Font.SourceSans
+                    messageText.TextXAlignment = Enum.TextXAlignment.Left
+                    messageText.Parent = messageFrame
+                    
+                    local messageButton = Instance.new("TextButton")
+                    messageButton.Name = "Button"
+                    messageButton.Size = UDim2.new(0, 20, 0, 20)
+                    messageButton.Position = UDim2.new(1, -30, 0, 5)
+                    messageButton.BackgroundColor3 = CurrentTheme.SurfaceVariant
+                    messageButton.BorderSizePixel = 0
+                    messageButton.Text = ""
+                    messageButton.Parent = messageFrame
+                    
+                    local buttonCorner = Instance.new("UICorner")
+                    buttonCorner.CornerRadius = UDim.new(0, 4)
+                    buttonCorner.Parent = messageButton
+                    
+                    messageButton.MouseButton1Click:Connect(function()
+                        -- Handle message button click
+                    end)
+                end
+                
+                return channelFrame
+            end
+            
+            function ByteUI:CreateDropdown(config)
                 config = config or {}
                 config.Text = config.Text or "Dropdown"
                 config.Options = config.Options or {"Option 1", "Option 2", "Option 3"}
                 config.Default = config.Default or config.Options[1]
                 config.Callback = config.Callback or function() end
-                
-                local dropdownFrame = Instance.new("Frame")
-                dropdownFrame.Name = config.Text .. "Dropdown"
-                dropdownFrame.Size = UDim2.new(1, 0, 0, 36)
-                dropdownFrame.BackgroundColor3 = CurrentTheme.SurfaceVariant
-                dropdownFrame.BorderSizePixel = 0
-                dropdownFrame.Parent = sectionContent
-                
-                local dropdownCorner = Instance.new("UICorner")
-                dropdownCorner.CornerRadius = UDim.new(0, 6)
-                dropdownCorner.Parent = dropdownFrame
-                
-                local dropdownLabel = Instance.new("TextLabel")
-                dropdownLabel.Name = "Label"
-                dropdownLabel.Size = UDim2.new(0.4, 0, 1, 0)
-                dropdownLabel.Position = UDim2.new(0, 12, 0, 0)
-                dropdownLabel.BackgroundTransparency = 1
-                dropdownLabel.Text = config.Text
-                dropdownLabel.TextColor3 = CurrentTheme.TextPrimary
-                dropdownLabel.TextSize = 14
-                dropdownLabel.Font = Enum.Font.SourceSans
-                dropdownLabel.TextXAlignment = Enum.TextXAlignment.Left
-                dropdownLabel.Parent = dropdownFrame
-                
-                local dropdownButton = Instance.new("TextButton")
-                dropdownButton.Name = "Button"
-                dropdownButton.Size = UDim2.new(0.55, -12, 0, 28)
-                dropdownButton.Position = UDim2.new(0.45, 0, 0, 4)
-                dropdownButton.BackgroundColor3 = CurrentTheme.Surface
-                dropdownButton.BorderSizePixel = 0
-                dropdownButton.Text = config.Default .. " ▼"
-                dropdownButton.TextColor3 = CurrentTheme.TextPrimary
-                dropdownButton.TextSize = 13
-                dropdownButton.Font = Enum.Font.SourceSans
-                dropdownButton.Parent = dropdownFrame
-                
-                local buttonCorner = Instance.new("UICorner")
-                buttonCorner.CornerRadius = UDim.new(0, 4)
-                buttonCorner.Parent = dropdownButton
-                
-                local buttonBorder = Instance.new("UIStroke")
-                buttonBorder.Color = CurrentTheme.Border
-                buttonBorder.Thickness = 1
-                buttonBorder.Transparency = 0.5
-                buttonBorder.Parent = dropdownButton
-                
-                local optionsFrame = Instance.new("Frame")
-                optionsFrame.Name = "Options"
-                optionsFrame.Size = UDim2.new(0.55, -12, 0, #config.Options * 32)
-                optionsFrame.Position = UDim2.new(0.45, 0, 1, 4)
-                optionsFrame.BackgroundColor3 = CurrentTheme.Surface
-                optionsFrame.BorderSizePixel = 0
-                optionsFrame.Visible = false
-                optionsFrame.ZIndex = 10
-                optionsFrame.Parent = dropdownFrame
-                
-                local optionsCorner = Instance.new("UICorner")
-                optionsCorner.CornerRadius = UDim.new(0, 6)
-                optionsCorner.Parent = optionsFrame
-                
-                local optionsBorder = Instance.new("UIStroke")
-                optionsBorder.Color = CurrentTheme.Border
-                optionsBorder.Thickness = 1
-                optionsBorder.Transparency = 0.3
-                optionsBorder.Parent = optionsFrame
-                
-                CreateDropShadow(optionsFrame)
-                
-                local optionsLayout = Instance.new("UIListLayout")
-                optionsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-                optionsLayout.Parent = optionsFrame
-                
-                local currentSelection = config.Default
-                local isOpen = false
-                
-                for i, option in ipairs(config.Options) do
-                    local optionButton = Instance.new("TextButton")
-                    optionButton.Name = "Option" .. i
-                    optionButton.Size = UDim2.new(1, 0, 0, 32)
-                    optionButton.BackgroundColor3 = CurrentTheme.Surface
-                    optionButton.BorderSizePixel = 0
-                    optionButton.Text = option
-                    optionButton.TextColor3 = CurrentTheme.TextPrimary
-                    optionButton.TextSize = 13
-                    optionButton.Font = Enum.Font.SourceSans
-                    optionButton.Parent = optionsFrame
-                    
-                    AddHoverEffect(optionButton, CurrentTheme.SurfaceVariant, CurrentTheme.Surface)
-                    
-                    optionButton.MouseButton1Click:Connect(function()
-                        currentSelection = option
-                        dropdownButton.Text = option .. " ▼"
-                        optionsFrame.Visible = false
-                        isOpen = false
-                        CreateSpringTween(dropdownFrame, {Size = UDim2.new(1, 0, 0, 36)}, 0.2)
-                        config.Callback(option)
-                    end)
-                end
-                
-                dropdownButton.MouseButton1Click:Connect(function()
-                    isOpen = not isOpen
-                    optionsFrame.Visible = isOpen
-                    
-                    if isOpen then
-                        CreateSpringTween(dropdownFrame, {Size = UDim2.new(1, 0, 0, 36 + #config.Options * 32 + 8)}, 0.2)
-                        dropdownButton.Text = currentSelection .. " ▲"
-                    else
-                        CreateSpringTween(dropdownFrame, {Size = UDim2.new(1, 0, 0, 36)}, 0.2)
-                        dropdownButton.Text = currentSelection .. " ▼"
-                    end
+{{ ... }}
                 end)
                 
                 return dropdownFrame
             end
             
-            function section:CreateTextbox(config)
+            function ByteUI:CreateTextbox(config)
                 config = config or {}
                 config.Text = config.Text or "Textbox"
                 config.Placeholder = config.Placeholder or "Enter text..."
                 config.Default = config.Default or ""
                 config.Callback = config.Callback or function() end
-                
-                local textboxFrame = Instance.new("Frame")
-                textboxFrame.Name = config.Text .. "Textbox"
-                textboxFrame.Size = UDim2.new(1, 0, 0, 50)
-                textboxFrame.BackgroundColor3 = CurrentTheme.SurfaceVariant
-                textboxFrame.BorderSizePixel = 0
-                textboxFrame.Parent = sectionContent
-                
-                local textboxCorner = Instance.new("UICorner")
-                textboxCorner.CornerRadius = UDim.new(0, 6)
-                textboxCorner.Parent = textboxFrame
-                
-                local textboxLabel = Instance.new("TextLabel")
-                textboxLabel.Name = "Label"
-                textboxLabel.Size = UDim2.new(1, -20, 0, 20)
-                textboxLabel.Position = UDim2.new(0, 10, 0, 5)
-                textboxLabel.BackgroundTransparency = 1
-                textboxLabel.Text = config.Text
-                textboxLabel.TextColor3 = CurrentTheme.TextPrimary
-                textboxLabel.TextSize = 14
-                textboxLabel.Font = Enum.Font.SourceSans
-                textboxLabel.TextXAlignment = Enum.TextXAlignment.Left
-                textboxLabel.Parent = textboxFrame
-                
-                local textboxInput = Instance.new("TextBox")
-                textboxInput.Name = "Input"
-                textboxInput.Size = UDim2.new(1, -20, 0, 22)
-                textboxInput.Position = UDim2.new(0, 10, 1, -27)
-                textboxInput.BackgroundColor3 = CurrentTheme.Surface
-                textboxInput.BorderSizePixel = 0
-                textboxInput.Text = config.Default
-                textboxInput.PlaceholderText = config.Placeholder
-                textboxInput.TextColor3 = CurrentTheme.TextPrimary
-                textboxInput.PlaceholderColor3 = CurrentTheme.TextDisabled
-                textboxInput.TextSize = 13
-                textboxInput.Font = Enum.Font.SourceSans
-                textboxInput.ClearButtonOnFocus = false
-                textboxInput.Parent = textboxFrame
-                
-                local inputCorner = Instance.new("UICorner")
-                inputCorner.CornerRadius = UDim.new(0, 4)
-                inputCorner.Parent = textboxInput
-                
-                local inputBorder = Instance.new("UIStroke")
-                inputBorder.Color = CurrentTheme.Border
-                inputBorder.Thickness = 1
-                inputBorder.Transparency = 0.5
-                inputBorder.Parent = textboxInput
-                
-                textboxInput.Focused:Connect(function()
-                    CreateSpringTween(inputBorder, {Color = CurrentTheme.Primary, Transparency = 0}, 0.2)
-                end)
-                
-                textboxInput.FocusLost:Connect(function()
-                    CreateSpringTween(inputBorder, {Color = CurrentTheme.Border, Transparency = 0.5}, 0.2)
-                    config.Callback(textboxInput.Text)
-                end)
-                
-                return textboxFrame
-            end
-            
-            function section:CreateLabel(config)
-                config = config or {}
-                config.Text = config.Text or "Label"
-                
-                local label = Instance.new("TextLabel")
-                label.Name = config.Text .. "Label"
-                label.Size = UDim2.new(1, 0, 0, 25)
-                label.BackgroundTransparency = 1
-                label.Text = config.Text
-                label.TextColor3 = CurrentTheme.TextSecondary
-                label.TextSize = 14
-                label.Font = Enum.Font.SourceSans
-                label.TextXAlignment = Enum.TextXAlignment.Left
-                label.TextWrapped = true
-                label.Parent = sectionContent
-                
-                return label
-            end
-            
-            return section
-        end
-        
-        return tab
-    end
-    
-    function window:Destroy()
-        screenGui:Destroy()
-    end
-    
-    function window:SetVisible(visible)
-        screenGui.Enabled = visible
-    end
-    
-    function window:SetTheme(themeName)
-        if Themes[themeName] then
-            CurrentTheme = Themes[themeName]
-            -- Update existing elements with new theme
-            -- This would require storing references to all elements
-        end
-    end
-    
-    -- Show window with animation
-    mainFrame.Size = UDim2.new(0, 0, 0, 0)
-    CreateSpringTween(mainFrame, {Size = config.Size}, 0.4)
-    
-    return window
-end
-
--- Notification System
-function NexusUI:CreateNotification(config)
-    config = config or {}
-    config.Title = config.Title or "Notification"
-    config.Description = config.Description or ""
-    config.Type = config.Type or "Info" -- Info, Success, Warning, Error
-    config.Duration = config.Duration or Config.NotificationDuration
-    
-    local notificationGui = Instance.new("ScreenGui")
-    notificationGui.Name = "NexusNotification"
-    notificationGui.ResetOnSpawn = false
-    notificationGui.IgnoreGuiInset = true
-    
-    if gethui then
-        notificationGui.Parent = gethui()
-    elseif syn and syn.protect_gui then
-        syn.protect_gui(notificationGui)
-        notificationGui.Parent = CoreGui
-    else
-        notificationGui.Parent = CoreGui
-    end
-    
-    local notification = Instance.new("Frame")
-    notification.Name = "Notification"
-    notification.Size = UDim2.new(0, 350, 0, 80)
-    notification.Position = UDim2.new(1, 20, 0, 50)
-    notification.BackgroundColor3 = CurrentTheme.Surface
-    notification.BorderSizePixel = 0
-    notification.Parent = notificationGui
-    
-    local notifCorner = Instance.new("UICorner")
-    notifCorner.CornerRadius = UDim.new(0, 10)
-    notifCorner.Parent = notification
-    
-    CreateDropShadow(notification)
-    
-    local notifBorder = Instance.new("UIStroke")
-    notifBorder.Thickness = 1
-    notifBorder.Transparency = 0.3
-    notifBorder.Parent = notification
-    
-    -- Set color based on type
-    local typeColors = {
-        Info = CurrentTheme.Primary,
-        Success = CurrentTheme.Success,
-        Warning = CurrentTheme.Warning,
-        Error = CurrentTheme.Error
-    }
-    notifBorder.Color = typeColors[config.Type] or CurrentTheme.Primary
-    
-    -- Icon
-    local icon = Instance.new("TextLabel")
-    icon.Name = "Icon"
-    icon.Size = UDim2.new(0, 24, 0, 24)
-    icon.Position = UDim2.new(0, 15, 0, 12)
-    icon.BackgroundTransparency = 1
-    icon.TextColor3 = typeColors[config.Type] or CurrentTheme.Primary
-    icon.TextSize = 20
-    icon.Font = Enum.Font.SourceSansBold
-    icon.TextXAlignment = Enum.TextXAlignment.Center
-    icon.Parent = notification
-    
-    local typeIcons = {
-        Info = "ℹ",
-        Success = "✓",
-        Warning = "⚠",
-        Error = "✗"
-    }
-    icon.Text = typeIcons[config.Type] or "ℹ"
-    
-    -- Title
-    local title = Instance.new("TextLabel")
-    title.Name = "Title"
-    title.Size = UDim2.new(1, -90, 0, 20)
-    title.Position = UDim2.new(0, 45, 0, 10)
-    title.BackgroundTransparency = 1
-    title.Text = config.Title
-    title.TextColor3 = CurrentTheme.TextPrimary
-    title.TextSize = 15
-    title.Font = Enum.Font.SourceSansBold
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.TextTruncate = Enum.TextTruncate.AtEnd
-    title.Parent = notification
-    
-    -- Description
-    if config.Description ~= "" then
-        local description = Instance.new("TextLabel")
-        description.Name = "Description"
-        description.Size = UDim2.new(1, -90, 0, 35)
-        description.Position = UDim2.new(0, 45, 0, 30)
-        description.BackgroundTransparency = 1
-        description.Text = config.Description
-        description.TextColor3 = CurrentTheme.TextSecondary
-        description.TextSize = 13
-        description.Font = Enum.Font.SourceSans
-        description.TextXAlignment = Enum.TextXAlignment.Left
-        description.TextYAlignment = Enum.TextYAlignment.Top
-        description.TextWrapped = true
-        description.Parent = notification
-    end
-    
-    -- Close button
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Name = "Close"
-    closeBtn.Size = UDim2.new(0, 20, 0, 20)
-    closeBtn.Position = UDim2.new(1, -30, 0, 10)
-    closeBtn.BackgroundTransparency = 1
-    closeBtn.Text = "×"
-    closeBtn.TextColor3 = CurrentTheme.TextSecondary
-    closeBtn.TextSize = 16
-    closeBtn.Font = Enum.Font.SourceSansBold
-    closeBtn.Parent = notification
-    
-    -- Animate in
-    CreateSpringTween(notification, {Position = UDim2.new(1, -370, 0, 50)}, 0.4)
-    
-    -- Auto close
-    local closeNotification = function()
-        CreateSpringTween(notification, {Position = UDim2.new(1, 20, 0, 50)}, 0.3)
-        wait(0.3)
-        notificationGui:Destroy()
-    end
-    
-    closeBtn.MouseButton1Click:Connect(closeNotification)
-    
-    if config.Duration > 0 then
-        spawn(function()
-            wait(config.Duration)
-            closeNotification()
-        end)
-    end
+{{ ... }}
     
     return notificationGui
 end
 
 -- Dialog System
-function NexusUI:CreateDialog(config)
+function ByteUI:CreateButton(config)
     config = config or {}
     config.Title = config.Title or "Dialog"
     config.Description = config.Description or "Are you sure?"
     config.Buttons = config.Buttons or {
         {Text = "Cancel", Callback = function() end},
-        {Text = "Confirm", Callback = function() end, Primary = true}
-    }
-    
-    local dialogGui = Instance.new("ScreenGui")
-    dialogGui.Name = "NexusDialog"
-    dialogGui.ResetOnSpawn = false
-    dialogGui.IgnoreGuiInset = true
-    
-    if gethui then
-        dialogGui.Parent = gethui()
-    elseif syn and syn.protect_gui then
-        syn.protect_gui(dialogGui)
-        dialogGui.Parent = CoreGui
-    else
-        dialogGui.Parent = CoreGui
-    end
-    
-    -- Backdrop
-    local backdrop = Instance.new("Frame")
-    backdrop.Name = "Backdrop"
-    backdrop.Size = UDim2.new(1, 0, 1, 0)
-    backdrop.Position = UDim2.new(0, 0, 0, 0)
-    backdrop.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    backdrop.BackgroundTransparency = 0.5
-    backdrop.BorderSizePixel = 0
-    backdrop.Parent = dialogGui
-    
-    -- Dialog
-    local dialog = Instance.new("Frame")
-    dialog.Name = "Dialog"
-    dialog.Size = UDim2.new(0, 400, 0, 200)
-    dialog.Position = UDim2.new(0.5, 0, 0.5, 0)
-    dialog.AnchorPoint = Vector2.new(0.5, 0.5)
-    dialog.BackgroundColor3 = CurrentTheme.Surface
-    dialog.BorderSizePixel = 0
-    dialog.Parent = dialogGui
-    
-    local dialogCorner = Instance.new("UICorner")
-    dialogCorner.CornerRadius = UDim.new(0, 12)
-    dialogCorner.Parent = dialog
-    
-    CreateDropShadow(dialog)
-    
-    -- Title
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Name = "Title"
-    titleLabel.Size = UDim2.new(1, -40, 0, 40)
-    titleLabel.Position = UDim2.new(0, 20, 0, 20)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = config.Title
-    titleLabel.TextColor3 = CurrentTheme.TextPrimary
-    titleLabel.TextSize = 18
-    titleLabel.Font = Enum.Font.SourceSansBold
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.Parent = dialog
-    
-    -- Description
-    local descLabel = Instance.new("TextLabel")
-    descLabel.Name = "Description"
-    descLabel.Size = UDim2.new(1, -40, 0, 80)
-    descLabel.Position = UDim2.new(0, 20, 0, 60)
-    descLabel.BackgroundTransparency = 1
-    descLabel.Text = config.Description
-    descLabel.TextColor3 = CurrentTheme.TextSecondary
-    descLabel.TextSize = 14
-    descLabel.Font = Enum.Font.SourceSans
-    descLabel.TextXAlignment = Enum.TextXAlignment.Left
-    descLabel.TextYAlignment = Enum.TextYAlignment.Top
-    descLabel.TextWrapped = true
-    descLabel.Parent = dialog
-    
-    -- Buttons
-    local buttonsFrame = Instance.new("Frame")
-    buttonsFrame.Name = "Buttons"
-    buttonsFrame.Size = UDim2.new(1, -40, 0, 40)
-    buttonsFrame.Position = UDim2.new(0, 20, 1, -60)
-    buttonsFrame.BackgroundTransparency = 1
-    buttonsFrame.Parent = dialog
-    
-    local buttonsLayout = Instance.new("UIListLayout")
-    buttonsLayout.FillDirection = Enum.FillDirection.Horizontal
-    buttonsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-    buttonsLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    buttonsLayout.Padding = UDim.new(0, 10)
-    buttonsLayout.Parent = buttonsFrame
-    
-    for i, buttonConfig in ipairs(config.Buttons) do
-        local button = Instance.new("TextButton")
-        button.Name = "Button" .. i
-        button.Size = UDim2.new(0, 100, 1, 0)
-        button.BackgroundColor3 = buttonConfig.Primary and CurrentTheme.Primary or CurrentTheme.SurfaceVariant
-        button.BorderSizePixel = 0
-        button.Text = buttonConfig.Text
-        button.TextColor3 = buttonConfig.Primary and Color3.fromRGB(255, 255, 255) or CurrentTheme.TextPrimary
-        button.TextSize = 14
-        button.Font = Enum.Font.SourceSansSemibold
-        button.Parent = buttonsFrame
-        
-        local buttonCorner = Instance.new("UICorner")
-        buttonCorner.CornerRadius = UDim.new(0, 6)
-        buttonCorner.Parent = button
-        
-        AddHoverEffect(button, 
-            buttonConfig.Primary and CurrentTheme.PrimaryVariant or CurrentTheme.Border,
-            buttonConfig.Primary and CurrentTheme.Primary or CurrentTheme.SurfaceVariant
-        )
-        
-        button.MouseButton1Click:Connect(function()
-            CreateRippleEffect(button, Vector2.new(50, 20))
-            buttonConfig.Callback()
-            dialogGui:Destroy()
-        end)
-    end
-    
-    -- Animate in
-    dialog.Size = UDim2.new(0, 0, 0, 0)
-    backdrop.BackgroundTransparency = 1
-    
-    CreateSpringTween(dialog, {Size = UDim2.new(0, 400, 0, 200)}, 0.4)
-    CreateSpringTween(backdrop, {BackgroundTransparency = 0.5}, 0.3)
+{{ ... }}
     
     return dialogGui
 end
 
 -- Loading System
-function NexusUI:CreateLoader(config)
+function ByteUI:CreateToggle(config)
     config = config or {}
     config.Text = config.Text or "Loading..."
     
     local loaderGui = Instance.new("ScreenGui")
     loaderGui.Name = "NexusLoader"
-    loaderGui.ResetOnSpawn = false
+{{ ... }}
     loaderGui.IgnoreGuiInset = true
     
     if gethui then
@@ -1556,4 +1457,4 @@ function NexusUI:CreateLoader(config)
     }
 end
 
-return NexusUI
+return ByteUI
